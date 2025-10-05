@@ -1,10 +1,11 @@
 import React from "react";
 import "./Home.css";
+import Menu from "../../components/Menu/Menu";
 
 export default function Home() {
   return (
     <div className="home-container">
-
+      <Menu />
       {/* Hero */}
       <section className="hero">
         <div className="hero-content">
