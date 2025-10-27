@@ -1,0 +1,115 @@
+.menu {
+  position: fixed;
+  left: 0;
+  top: 0;
+  height: 100vh;
+  width: 240px;
+  background: linear-gradient(180deg, #6366f1, #8b5cf6);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.3s ease;
+  z-index: 100;
+}
+
+.menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+}
+
+.menu-header h2 {
+  font-size: 1.4rem;
+  letter-spacing: 1px;
+}
+
+.menu-toggle {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.4rem;
+  cursor: pointer;
+  display: none;
+}
+
+/* Links */
+.menu-links {
+  list-style: none;
+  padding: 0;
+  margin: 30px 0;
+  flex-grow: 1;
+}
+
+.menu-links li {
+  margin: 10px 0;
+}
+
+.menu-links a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: white;
+  text-decoration: none;
+  padding: 12px 20px;
+  border-radius: 10px;
+  transition: background 0.3s ease;
+  font-size: 1rem;
+}
+
+.menu-links a:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Rodapé */
+.menu-footer {
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.logout-btn {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  font-size: 1rem;
+  border-radius: 10px;
+  padding: 10px 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background 0.3s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ===== Responsivo (mobile) ===== */
+@media (max-width: 768px) {
+  .menu {
+    width: 70px;
+    overflow: hidden;
+  }
+
+  .menu.open {
+    width: 240px;
+  }
+
+  .menu-toggle {
+    display: block;
+  }
+
+  .menu-links span,
+  .menu-footer span {
+    display: none;
+  }
+
+  .menu.open .menu-links span,
+  .menu.open .menu-footer span {
+    display: inline;
+  }
+}

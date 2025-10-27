@@ -18,22 +18,30 @@ export default function Login() {
     try {
       const response = await fetch("http://localhost:8080/auth/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
       });
 
-      if (!response.ok) {
-        throw new Error("Usuário ou senha inválidos");
-      }
+      if (!response.ok) throw new Error("Usuário ou senha inválidos");
 
       const data = await response.json();
 
       if (data.token) {
+        // 🔹 Salva token
         localStorage.setItem("token", data.token);
-        login();
-        navigate("/dashboard");
+        // 🔹 Salva dados do usuário
+        localStorage.setItem("usuario", JSON.stringify(data.usuario));
+
+        // 🔹 Se perfilFinanceiro existir, salva e vai pro dashboard
+        if (data.perfilFinanceiro) {
+          localStorage.setItem("perfilFinanceiro", JSON.stringify(data.perfilFinanceiro));
+          login();
+          navigate("/dashboard");
+        } else {
+          // 🔹 Caso não tenha perfil ainda, redireciona pro cadastro
+          login();
+          navigate("/perfil-financeiro");
+        }
       } else {
         throw new Error("Resposta inesperada do servidor");
       }
