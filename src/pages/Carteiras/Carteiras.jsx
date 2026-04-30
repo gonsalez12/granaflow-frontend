@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import "./Carteiras.css";
 import MenuLogado from "../../components/MenuLogado/MenuLogado.jsx";
-import { useNavigate } from "react-router-dom";
-import { FaTrash, FaWallet } from "react-icons/fa";
+import { useNavigate, Link } from "react-router-dom";
+import { FaTrash, FaWallet, FaArrowRight } from "react-icons/fa";
 
 export default function Carteiras() {
   const navigate = useNavigate();
@@ -135,13 +135,22 @@ export default function Carteiras() {
                     </span>
                   </div>
                 </div>
-                <button
-                  className="carteira-delete-btn"
-                  onClick={() => handleDeletar(carteira.id)}
-                  title="Deletar carteira"
-                >
-                  <FaTrash />
-                </button>
+                <div className="carteira-actions">
+                  <Link
+                    to={`/carteiras/${carteira.id}`}
+                    className="carteira-acessar-btn"
+                    title="Acessar carteira"
+                  >
+                    <FaArrowRight />
+                  </Link>
+                  <button
+                    className="carteira-delete-btn"
+                    onClick={() => handleDeletar(carteira.id)}
+                    title="Deletar carteira"
+                  >
+                    <FaTrash />
+                  </button>
+                </div>
               </div>
             ))
           )}

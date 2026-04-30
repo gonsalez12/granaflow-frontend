@@ -5,6 +5,7 @@ import Register from "./pages/Register/Register";
 import Dashboard from "./pages/Dashboard/Dashboard";
 import PerfilFinanceiro from "./pages/PerfilFinanceiro/PerfilFinanceiro";
 import Carteiras from "./pages/Carteiras/Carteiras";
+import CarteiraDetalhe from "./pages/CarteiraDetalhe/CarteiraDetalhe";
 
 import PrivateRoute from "./config/PrivateRoute";
 import { AuthProvider } from "./config/AuthContext";
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/perfil-financeiro" element={<PrivateRoute><PerfilFinanceiro/></PrivateRoute>} />
           <Route path="/carteiras" element={<PrivateRoute><Carteiras/></PrivateRoute>} />
+          <Route path="/carteiras/:id" element={<PrivateRoute><CarteiraDetalhe/></PrivateRoute>} />
         </Routes>
       </Router>
     </AuthProvider>
