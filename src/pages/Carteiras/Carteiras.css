@@ -1,0 +1,215 @@
+.carteiras-container {
+  min-height: 100vh;
+  width: 100vw;
+  padding: 50px 25px;
+  background: linear-gradient(135deg, #eef2f3 0%, #d9e4ec 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: "Poppins", sans-serif;
+}
+
+.carteiras-content {
+  margin-left: 240px;
+  width: calc(100% - 280px);
+  max-width: 800px;
+}
+
+.carteiras-header {
+  text-align: center;
+  margin-bottom: 40px;
+  animation: fadeIn 1s ease-in-out;
+}
+
+.carteiras-header h1 {
+  color: #1e293b;
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.carteiras-header p {
+  color: #475569;
+  font-size: 1.05rem;
+  margin-top: 10px;
+}
+
+/* Form Card */
+.carteiras-form-card {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  margin-bottom: 30px;
+}
+
+.carteiras-form-card h2 {
+  color: #1e293b;
+  margin-bottom: 20px;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.carteiras-form {
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+}
+
+.carteiras-form .form-group {
+  flex: 1;
+  text-align: left;
+}
+
+.carteiras-form label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: #444;
+  font-size: 14px;
+}
+
+.carteiras-form input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 14px;
+  transition: border 0.3s;
+}
+
+.carteiras-form input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.carteiras-button {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.carteiras-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.carteiras-error {
+  color: #ef4444;
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+.carteiras-success {
+  color: #22c55e;
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+/* List */
+.carteiras-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.carteiras-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #94a3b8;
+}
+
+.carteiras-empty p {
+  margin-top: 15px;
+  font-size: 1.1rem;
+}
+
+/* Card */
+.carteira-card {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  padding: 20px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.carteira-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+}
+
+.carteira-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.carteira-info h3 {
+  color: #1e293b;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.carteira-data {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.carteira-delete-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border: none;
+  color: #ef4444;
+  padding: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.carteira-delete-btn:hover {
+  background: #ef4444;
+  color: white;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+  .carteiras-content {
+    margin-left: 70px;
+    width: calc(100% - 90px);
+  }
+
+  .carteiras-form {
+    flex-direction: column;
+  }
+
+  .carteiras-button {
+    width: 100%;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./MenuLogado.css";
-import { FaChartPie, FaUserCircle, FaHome, FaSignOutAlt, FaBars } from "react-icons/fa";
+import { FaChartPie, FaUserCircle, FaHome, FaSignOutAlt, FaBars, FaWallet } from "react-icons/fa";
 
 export default function MenuLogado() {
   const [open, setOpen] = useState(false);
@@ -36,6 +36,11 @@ export default function MenuLogado() {
         <li>
           <Link to="/dashboard">
             <FaChartPie /> <span>Dashboard</span>
+          </Link>
+        </li>
+        <li>
+          <Link to="/carteiras">
+            <FaWallet /> <span>Carteiras</span>
           </Link>
         </li>
       </ul>
