@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import "./Home.css";
 import Menu from "../../components/Menu/Menu";
 
@@ -14,7 +15,31 @@ export default function Home() {
             Gerencie seus gastos fixos e variáveis, acompanhe seus ativos
             financeiros — tudo em um só lugar.
           </p>
-          <button className="cta-button">Comece agora</button>
+          <Link to="/register" className="cta-button">Comece agora</Link>
+        </div>
+        <div className="hero-preview" aria-hidden="true">
+          <div className="preview-top">
+            <span>Patrimonio</span>
+            <strong>R$ 48.720,00</strong>
+          </div>
+          <div className="preview-bars">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div className="preview-row">
+            <span>Carteiras</span>
+            <strong>4</strong>
+          </div>
+          <div className="preview-row positive">
+            <span>Saldo mensal</span>
+            <strong>+R$ 1.840,00</strong>
+          </div>
+          <div className="preview-row">
+            <span>Reserva</span>
+            <strong>R$ 18.000,00</strong>
+          </div>
         </div>
       </section>
 

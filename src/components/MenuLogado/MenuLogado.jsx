@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./MenuLogado.css";
-import { FaChartPie, FaUserCircle, FaHome, FaSignOutAlt, FaBars, FaWallet } from "react-icons/fa";
+import { FaHome, FaSignOutAlt, FaBars, FaWallet } from "react-icons/fa";
 
 export default function MenuLogado() {
   const [open, setOpen] = useState(false);
@@ -9,6 +9,7 @@ export default function MenuLogado() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("usuario");
     localStorage.removeItem("perfilFinanceiro");
     navigate("/login");
   };
@@ -24,18 +25,8 @@ export default function MenuLogado() {
 
       <ul className="menu-links">
         <li>
-          <Link to="/home">
-            <FaHome /> <span>Home</span>
-          </Link>
-        </li>
-        <li>
-          <Link to="/perfil-financeiro">
-            <FaUserCircle /> <span>Perfil Financeiro</span>
-          </Link>
-        </li>
-        <li>
           <Link to="/dashboard">
-            <FaChartPie /> <span>Dashboard</span>
+            <FaHome /> <span>Início</span>
           </Link>
         </li>
         <li>

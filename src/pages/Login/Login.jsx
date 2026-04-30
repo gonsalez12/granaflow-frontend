@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./Login.css";
-import { useAuth } from "../../config/AuthContext";
+import { useAuth } from "../../config/useAuth";
+import { API_BASE_URL } from "../../config/api";
 import { useNavigate, Link } from "react-router-dom";
 
 export default function Login() {
@@ -11,12 +12,18 @@ export default function Login() {
   const [password, setPassword] = useState(""); 
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    if (localStorage.getItem("token")) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
     try {
-      const response = await fetch("http://localhost:8080/auth/login", {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })

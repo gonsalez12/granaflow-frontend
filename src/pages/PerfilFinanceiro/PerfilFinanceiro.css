@@ -1,75 +1,64 @@
 .perfil-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 100vh;
-  width: 100vw;
-  background: linear-gradient(135deg, #7b4397, #dc2430);
+  width: 100%;
+  display: grid;
+  place-items: center;
+  padding: 36px 18px;
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.1), transparent 42%),
+    var(--bg);
 }
 
 .perfil-box {
-  background: white;
-  padding: 40px;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  width: 100%;
-  max-width: 400px;
-  text-align: center;
+  width: min(460px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 34px;
 }
 
 .perfil-box h2 {
-  margin-bottom: 10px;
-  color: #333;
+  color: #0f172a;
+  font-size: 2rem;
+  margin-bottom: 8px;
 }
 
 .perfil-subtitle {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 20px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 26px;
 }
 
-.perfil-form .form-group {
-  margin-bottom: 15px;
-  text-align: left;
-}
-
-.perfil-form label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 5px;
-  color: #444;
-}
-
-.perfil-form input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 14px;
+.perfil-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .perfil-button {
   width: 100%;
-  background: #7b4397;
-  color: white;
+  min-height: 48px;
   border: none;
-  padding: 12px;
   border-radius: 8px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: 0.3s;
+  background: var(--primary);
+  color: white;
+  font-weight: 900;
+  margin-top: 4px;
 }
 
 .perfil-button:hover {
-  background: #662d91;
+  background: var(--primary-dark);
 }
 
 .perfil-error {
-  color: red;
-  margin-top: 10px;
+  color: var(--danger);
+  margin-top: 14px;
+  font-weight: 700;
 }
 
 .perfil-success {
-  color: green;
-  margin-top: 10px;
+  color: #059669;
+  margin-top: 14px;
+  font-weight: 700;
 }

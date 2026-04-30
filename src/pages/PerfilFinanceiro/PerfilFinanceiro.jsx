@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./PerfilFinanceiro.css";
+import { API_BASE_URL, getAuthHeaders } from "../../config/api";
 import { useNavigate } from "react-router-dom";
 
 export default function PerfilFinanceiro() {
@@ -15,18 +16,17 @@ export default function PerfilFinanceiro() {
     setSuccess("");
 
     try {
-      const token = localStorage.getItem("token");
       const usuario = JSON.parse(localStorage.getItem("usuario"));
 
       if (!usuario?.id) {
         throw new Error("Usuário não identificado.");
       }
 
-      const response = await fetch(`http://localhost:8080/perfil-financeiro`, {
+      const response = await fetch(`${API_BASE_URL}/perfil-financeiro`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({
           rendaMensal,

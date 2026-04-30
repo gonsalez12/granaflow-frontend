@@ -2,114 +2,116 @@
   position: fixed;
   left: 0;
   top: 0;
+  z-index: 100;
+  width: 248px;
   height: 100vh;
-  width: 240px;
-  background: linear-gradient(180deg, #6366f1, #8b5cf6);
-  color: white;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: all 0.3s ease;
-  z-index: 100;
+  background: var(--sidebar);
+  color: #ffffff;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .menu-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
+  padding: 24px 22px 18px;
 }
 
 .menu-header h2 {
-  font-size: 1.4rem;
-  letter-spacing: 1px;
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: 0;
 }
 
 .menu-toggle {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 1.4rem;
-  cursor: pointer;
   display: none;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border-radius: 8px;
+  width: 38px;
+  height: 38px;
 }
 
-/* Links */
 .menu-links {
   list-style: none;
-  padding: 0;
-  margin: 30px 0;
-  flex-grow: 1;
+  padding: 12px;
+  margin: 0;
+  flex: 1;
 }
 
 .menu-links li {
-  margin: 10px 0;
+  margin: 4px 0;
 }
 
 .menu-links a {
   display: flex;
   align-items: center;
   gap: 12px;
-  color: white;
-  text-decoration: none;
-  padding: 12px 20px;
-  border-radius: 10px;
-  transition: background 0.3s ease;
-  font-size: 1rem;
+  min-height: 46px;
+  border-radius: 8px;
+  color: #cbd5e1;
+  padding: 0 12px;
+  font-weight: 800;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .menu-links a:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
 
-/* Rodapé */
 .menu-footer {
-  padding: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 16px;
 }
 
 .logout-btn {
   width: 100%;
-  background: rgba(255, 255, 255, 0.15);
-  border: none;
-  color: white;
-  font-size: 1rem;
-  border-radius: 10px;
-  padding: 10px 0;
-  cursor: pointer;
+  min-height: 46px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  transition: background 0.3s ease;
+  font-weight: 800;
 }
 
 .logout-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(220, 38, 38, 0.22);
 }
 
-/* ===== Responsivo (mobile) ===== */
 @media (max-width: 768px) {
   .menu {
-    width: 70px;
+    width: 72px;
     overflow: hidden;
   }
 
   .menu.open {
-    width: 240px;
+    width: 248px;
+    box-shadow: var(--shadow);
   }
 
   .menu-toggle {
-    display: block;
+    display: inline-grid;
+    place-items: center;
   }
 
   .menu-links span,
-  .menu-footer span {
+  .menu-footer span,
+  .menu-header h2 {
     display: none;
   }
 
   .menu.open .menu-links span,
-  .menu.open .menu-footer span {
+  .menu.open .menu-footer span,
+  .menu.open .menu-header h2 {
     display: inline;
   }
 }
