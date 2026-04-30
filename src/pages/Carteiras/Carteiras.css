@@ -1,215 +1,168 @@
 .carteiras-container {
   min-height: 100vh;
-  width: 100vw;
-  padding: 50px 25px;
-  background: linear-gradient(135deg, #eef2f3 0%, #d9e4ec 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-family: "Poppins", sans-serif;
+  width: 100%;
+  padding: 42px 36px 56px 284px;
+  background: var(--bg);
 }
 
 .carteiras-content {
-  margin-left: 240px;
-  width: calc(100% - 280px);
-  max-width: 800px;
+  width: min(980px, 100%);
+  margin: 0 auto;
 }
 
 .carteiras-header {
-  text-align: center;
-  margin-bottom: 40px;
-  animation: fadeIn 1s ease-in-out;
+  margin-bottom: 26px;
 }
 
 .carteiras-header h1 {
-  color: #1e293b;
-  font-size: 2.2rem;
-  font-weight: 700;
-  letter-spacing: -0.5px;
+  color: #0f172a;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.05;
+  margin-bottom: 8px;
 }
 
 .carteiras-header p {
-  color: #475569;
+  color: var(--muted);
   font-size: 1.05rem;
-  margin-top: 10px;
+  margin: 0;
 }
 
-/* Form Card */
 .carteiras-form-card {
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(10px);
-  border-radius: 20px;
-  padding: 30px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-  margin-bottom: 30px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin-bottom: 22px;
 }
 
 .carteiras-form-card h2 {
-  color: #1e293b;
-  margin-bottom: 20px;
-  font-size: 1.4rem;
-  font-weight: 600;
+  color: #0f172a;
+  font-size: 1.25rem;
+  margin-bottom: 18px;
 }
 
 .carteiras-form {
-  display: flex;
-  gap: 15px;
-  align-items: flex-end;
-}
-
-.carteiras-form .form-group {
-  flex: 1;
-  text-align: left;
-}
-
-.carteiras-form label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 5px;
-  color: #444;
-  font-size: 14px;
-}
-
-.carteiras-form input {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-  font-size: 14px;
-  transition: border 0.3s;
-}
-
-.carteiras-form input:focus {
-  outline: none;
-  border-color: #6366f1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: end;
 }
 
 .carteiras-button {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: white;
+  min-height: 46px;
   border: none;
-  padding: 12px 24px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s;
+  border-radius: 8px;
+  background: var(--primary);
+  color: white;
+  padding: 0 18px;
+  font-weight: 900;
   white-space: nowrap;
 }
 
 .carteiras-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  background: var(--primary-dark);
 }
 
 .carteiras-error {
-  color: #ef4444;
-  margin-top: 15px;
-  font-size: 14px;
+  color: var(--danger);
+  margin: 14px 0 0;
+  font-weight: 700;
 }
 
 .carteiras-success {
-  color: #22c55e;
-  margin-top: 15px;
-  font-size: 14px;
+  color: #059669;
+  margin: 14px 0 0;
+  font-weight: 700;
 }
 
-/* List */
 .carteiras-list {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+  display: grid;
+  gap: 12px;
 }
 
 .carteiras-empty {
+  background: var(--surface);
+  border: 1px dashed #b8c4d6;
+  border-radius: 8px;
+  padding: 46px 20px;
   text-align: center;
-  padding: 60px 20px;
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 .carteiras-empty p {
-  margin-top: 15px;
-  font-size: 1.1rem;
+  margin: 12px 0 0;
 }
 
-/* Card */
 .carteira-card {
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(12px);
-  border-radius: 16px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-  padding: 20px 25px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(16, 24, 39, 0.06);
+  padding: 18px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: all 0.3s ease;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  gap: 20px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .carteira-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+  border-color: rgba(37, 99, 235, 0.35);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+.carteira-card:focus-visible {
+  outline: 4px solid rgba(37, 99, 235, 0.14);
+  outline-offset: 2px;
 }
 
 .carteira-info {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 14px;
 }
 
 .carteira-info h3 {
-  color: #1e293b;
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin: 0;
+  color: #0f172a;
+  font-size: 1.05rem;
+  margin: 0 0 3px;
 }
 
 .carteira-data {
-  color: #64748b;
-  font-size: 0.85rem;
+  color: var(--muted);
+  font-size: 0.88rem;
 }
 
 .carteira-delete-btn {
-  background: rgba(239, 68, 68, 0.1);
+  width: 42px;
+  height: 42px;
   border: none;
-  color: #ef4444;
-  padding: 10px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 8px;
+  background: #fee2e2;
+  color: var(--danger);
+  display: grid;
+  place-items: center;
 }
 
 .carteira-delete-btn:hover {
-  background: #ef4444;
+  background: var(--danger);
   color: white;
 }
 
-/* Responsivo */
 @media (max-width: 768px) {
-  .carteiras-content {
-    margin-left: 70px;
-    width: calc(100% - 90px);
+  .carteiras-container {
+    padding-left: 96px;
+    padding-right: 18px;
   }
 
   .carteiras-form {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
 
   .carteiras-button {
     width: 100%;
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
   }
 }

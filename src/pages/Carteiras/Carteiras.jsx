@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import "./Carteiras.css";
 import MenuLogado from "../../components/MenuLogado/MenuLogado.jsx";
+import { API_BASE_URL, getAuthHeaders } from "../../config/api";
 import { useNavigate } from "react-router-dom";
 import { FaTrash, FaWallet } from "react-icons/fa";
 
@@ -11,20 +12,10 @@ export default function Carteiras() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const token = localStorage.getItem("token");
-
-  useEffect(() => {
-    if (!token) {
-      navigate("/login");
-      return;
-    }
-    carregarCarteiras();
-  }, []);
-
-  const carregarCarteiras = async () => {
+  const carregarCarteiras = useCallback(async () => {
     try {
-      const response = await fetch("http://localhost:8080/carteira", {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await fetch(`${API_BASE_URL}/carteira`, {
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) throw new Error("Erro ao carregar carteiras");
@@ -34,7 +25,16 @@ export default function Carteiras() {
     } catch (err) {
       setError(err.message);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!localStorage.getItem("token")) {
+      navigate("/login");
+      return;
+    }
+
+    carregarCarteiras();
+  }, [carregarCarteiras, navigate]);
 
   const handleCriar = async (e) => {
     e.preventDefault();
@@ -42,11 +42,11 @@ export default function Carteiras() {
     setSuccess("");
 
     try {
-      const response = await fetch("http://localhost:8080/carteira", {
+      const response = await fetch(`${API_BASE_URL}/carteira`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({ nome }),
       });
@@ -69,9 +69,9 @@ export default function Carteiras() {
     setSuccess("");
 
     try {
-      const response = await fetch(`http://localhost:8080/carteira/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/carteira/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) throw new Error("Erro ao deletar carteira");
@@ -122,7 +122,25 @@ export default function Carteiras() {
             </div>
           ) : (
             carteiras.map((carteira) => (
-              <div key={carteira.id} className="carteira-card">
+              <div
+                key={carteira.id}
+                className="carteira-card"
+                role="button"
+                tabIndex={0}
+                onClick={() =>
+                  navigate(`/carteiras/${carteira.id}/operacoes`, {
+                    state: { carteira },
+                  })
+                }
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    navigate(`/carteiras/${carteira.id}/operacoes`, {
+                      state: { carteira },
+                    });
+                  }
+                }}
+              >
                 <div className="carteira-info">
                   <FaWallet size={24} color="#6366f1" />
                   <div>
@@ -137,7 +155,10 @@ export default function Carteiras() {
                 </div>
                 <button
                   className="carteira-delete-btn"
-                  onClick={() => handleDeletar(carteira.id)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleDeletar(carteira.id);
+                  }}
                   title="Deletar carteira"
                 >
                   <FaTrash />
