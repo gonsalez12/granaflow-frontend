@@ -136,6 +136,31 @@
   font-size: 0.88rem;
 }
 
+.carteira-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.carteira-acessar-btn {
+  background: rgba(99, 102, 241, 0.1);
+  border: none;
+  color: #6366f1;
+  padding: 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.carteira-acessar-btn:hover {
+  background: #6366f1;
+  color: white;
+}
+
 .carteira-delete-btn {
   width: 42px;
   height: 42px;
