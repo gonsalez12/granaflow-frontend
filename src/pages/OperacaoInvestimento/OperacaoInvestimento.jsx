@@ -36,6 +36,14 @@ export default function OperacaoInvestimento() {
   const [activeTab, setActiveTab] = useState("posicao");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [loadingPreco, setLoadingPreco] = useState(false);
+  const [precosDoDia, setPrecosDoDia] = useState({});
+
+  const formatCurrency = (value) =>
+    Number(value).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
 
   const valorTotal = useMemo(() => {
     const quantidadeNumerica = Number(quantidade);
@@ -45,6 +53,33 @@ export default function OperacaoInvestimento() {
     if (!quantidadeNumerica || !valorNumerico) return taxaNumerica;
     return quantidadeNumerica * valorNumerico + taxaNumerica;
   }, [quantidade, valorTaxa, valorUnitario]);
+
+  const buscarPrecoAtual = async () => {
+    if (!nomeAtivo) {
+      setError("Informe o ticker do ativo para buscar o preço.");
+      return;
+    }
+
+    setLoadingPreco(true);
+    setError("");
+    try {
+      const response = await fetch(`${API_BASE_URL}/acao/preco/${nomeAtivo.trim().toUpperCase()}`, {
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error("Não foi possível encontrar o preço para este ativo.");
+      }
+
+      const preco = await response.json();
+      setValorUnitario(preco);
+      setSuccess(`Preço de ${nomeAtivo.toUpperCase()} atualizado.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoadingPreco(false);
+    }
+  };
 
   const posicaoResumo = useMemo(() => {
     const totalInvestido = posicoes.reduce(
@@ -91,6 +126,60 @@ export default function OperacaoInvestimento() {
   useEffect(() => {
     carregarOperacoes();
   }, [carregarOperacoes]);
+
+  useEffect(() => {
+    if (activeTab !== "posicao" || posicoes.length === 0) {
+      return;
+    }
+
+    const acoes = posicoes.filter((posicao) => posicao.tipoAtivo === "ACOES");
+    if (acoes.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const carregarPrecosDoDia = async () => {
+      const resultados = await Promise.allSettled(
+        acoes.map(async (posicao) => {
+          const response = await fetch(
+            `${API_BASE_URL}/acao/preco/${posicao.nomeAtivo}`,
+            { headers: getAuthHeaders() }
+          );
+
+          if (!response.ok) {
+            throw new Error(`Falha ao buscar preco de ${posicao.nomeAtivo}`);
+          }
+
+          const preco = await response.json();
+          return [posicao.nomeAtivo, preco];
+        })
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      setPrecosDoDia((current) => {
+        const proximos = { ...current };
+
+        resultados.forEach((resultado) => {
+          if (resultado.status === "fulfilled") {
+            const [ticker, preco] = resultado.value;
+            proximos[ticker] = preco;
+          }
+        });
+
+        return proximos;
+      });
+    };
+
+    carregarPrecosDoDia();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, posicoes]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -191,10 +280,7 @@ export default function OperacaoInvestimento() {
                   <article className="posicao-summary-card destaque">
                     <span>Total investido</span>
                     <strong>
-                      {posicaoResumo.totalInvestido.toLocaleString("pt-BR", {
-                        style: "currency",
-                        currency: "BRL",
-                      })}
+                      {formatCurrency(posicaoResumo.totalInvestido)}
                     </strong>
                   </article>
                   <article className="posicao-summary-card">
@@ -228,19 +314,22 @@ export default function OperacaoInvestimento() {
                         <div>
                           <dt>Preco medio</dt>
                           <dd>
-                            {Number(posicao.valorMedioCompra).toLocaleString("pt-BR", {
-                              style: "currency",
-                              currency: "BRL",
-                            })}
+                            {formatCurrency(posicao.valorMedioCompra)}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt>Preco do dia</dt>
+                          <dd>
+                            {posicao.tipoAtivo === "ACOES" &&
+                            precosDoDia[posicao.nomeAtivo] != null
+                              ? formatCurrency(precosDoDia[posicao.nomeAtivo])
+                              : "--"}
                           </dd>
                         </div>
                         <div>
                           <dt>Total investido</dt>
                           <dd>
-                            {Number(posicao.totalInvestido).toLocaleString("pt-BR", {
-                              style: "currency",
-                              currency: "BRL",
-                            })}
+                            {formatCurrency(posicao.totalInvestido)}
                           </dd>
                         </div>
                       </dl>
@@ -273,16 +362,18 @@ export default function OperacaoInvestimento() {
               </div>
 
               <form className="operacao-form" onSubmit={handleSubmit}>
-                <label>
-                  Ativo
-                  <input
-                    type="text"
-                    value={nomeAtivo}
-                    onChange={(event) => setNomeAtivo(event.target.value)}
-                    placeholder="Ex: PETR4"
-                    required
-                  />
-                </label>
+                <div className="input-with-button">
+                  <label>
+                    Ativo
+                    <input
+                      type="text"
+                      value={nomeAtivo}
+                      onChange={(event) => setNomeAtivo(event.target.value)}
+                      placeholder="Ex: PETR4"
+                      required
+                    />
+                  </label>
+                </div>
 
                 <label>
                   Tipo de ativo
@@ -353,10 +444,7 @@ export default function OperacaoInvestimento() {
                 <div className="operacao-total">
                   <span>Total</span>
                   <strong>
-                    {valorTotal.toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
+                    {formatCurrency(valorTotal)}
                   </strong>
                 </div>
 
@@ -386,19 +474,13 @@ export default function OperacaoInvestimento() {
                       <h3>{operacao.nomeAtivo}</h3>
                       <p>
                         {operacao.quantidade} cotas x{" "}
-                        {Number(operacao.valorUnitario).toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL",
-                        })}
+                        {formatCurrency(operacao.valorUnitario)}
                       </p>
                     </div>
 
                     <div className="operacao-item-side">
                       <strong>
-                        {Number(operacao.valorTotal).toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL",
-                        })}
+                        {formatCurrency(operacao.valorTotal)}
                       </strong>
                       <span>
                         {new Date(operacao.dataCompra).toLocaleDateString("pt-BR")}
