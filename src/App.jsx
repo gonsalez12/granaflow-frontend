@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import PerfilFinanceiro from "./pages/PerfilFinanceiro/PerfilFinanceiro";
 import Carteiras from "./pages/Carteiras/Carteiras";
 import OperacaoInvestimento from "./pages/OperacaoInvestimento/OperacaoInvestimento";
+import ImportacaoB3 from "./pages/ImportacaoB3/ImportacaoB3";
 
 import PrivateRoute from "./config/PrivateRoute";
 import { AuthProvider } from "./config/AuthContext";
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/perfil-financeiro" element={<PrivateRoute><PerfilFinanceiro/></PrivateRoute>} />
           <Route path="/carteiras" element={<PrivateRoute><Carteiras/></PrivateRoute>} />
           <Route path="/carteiras/:id/operacoes" element={<PrivateRoute><OperacaoInvestimento/></PrivateRoute>} />
+          <Route path="/carteiras/:id/importar/:modo" element={<PrivateRoute><ImportacaoB3/></PrivateRoute>} />
         </Routes>
       </Router>
     </AuthProvider>

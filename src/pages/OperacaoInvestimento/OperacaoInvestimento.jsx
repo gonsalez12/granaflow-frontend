@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { FaArrowLeft, FaExchangeAlt } from "react-icons/fa";
+import { FaArrowLeft, FaExchangeAlt, FaFileImport } from "react-icons/fa";
 import MenuLogado from "../../components/MenuLogado/MenuLogado.jsx";
 import { API_BASE_URL, getAuthHeaders } from "../../config/api";
 import "./OperacaoInvestimento.css";
@@ -8,6 +8,7 @@ import "./OperacaoInvestimento.css";
 const today = new Date().toISOString().slice(0, 10);
 const tiposAtivo = [
   { value: "ACOES", label: "Acoes" },
+  { value: "BDR", label: "BDR" },
   { value: "FUNDOS_IMOBILIARIOS", label: "Fundos imobiliarios" },
   { value: "TESOURO_DIRETO", label: "Tesouro direto" },
   { value: "CRIPTOMOEDAS", label: "Criptomoedas" },
@@ -33,10 +34,25 @@ export default function OperacaoInvestimento() {
   const [dataCompra, setDataCompra] = useState(today);
   const [operacoes, setOperacoes] = useState([]);
   const [posicoes, setPosicoes] = useState([]);
+  const [proventos, setProventos] = useState([]);
   const [activeTab, setActiveTab] = useState("posicao");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loadingPreco, setLoadingPreco] = useState(false);
+
+  const carregarProventos = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/provento/carteira/${id}`, {
+        headers: getAuthHeaders(),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setProventos(data);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar proventos:", err);
+    }
+  }, [id]);
   const [precosDoDia, setPrecosDoDia] = useState({});
 
   const formatCurrency = (value) =>
@@ -53,6 +69,26 @@ export default function OperacaoInvestimento() {
     if (!quantidadeNumerica || !valorNumerico) return taxaNumerica;
     return quantidadeNumerica * valorNumerico + taxaNumerica;
   }, [quantidade, valorTaxa, valorUnitario]);
+
+  const proventosResumo = useMemo(() => {
+    const total = proventos.reduce(
+      (acc, curr) => acc + Number(curr.valorLiquido || 0),
+      0
+    );
+
+    const porTipo = proventos.reduce((acc, curr) => {
+      const tipo = curr.tipoProvento || "N/A";
+      acc[tipo] = (acc[tipo] || 0) + Number(curr.valorLiquido || 0);
+      return acc;
+    }, {});
+
+    return {
+      total,
+      quantidade: proventos.length,
+      tipos: Object.keys(porTipo).length,
+      porTipo,
+    };
+  }, [proventos]);
 
   const buscarPrecoAtual = async () => {
     if (!nomeAtivo) {
@@ -86,12 +122,26 @@ export default function OperacaoInvestimento() {
       (total, posicao) => total + Number(posicao.totalInvestido),
       0
     );
-    const categorias = [...new Set(posicoes.map((posicao) => posicao.tipoAtivo))];
+    
+    const agrupado = {};
+    posicoes.forEach(posicao => {
+      const cat = posicao.tipoAtivo;
+      if (!agrupado[cat]) {
+        agrupado[cat] = {
+          label: tipoAtivoLabels[cat] || cat,
+          items: [],
+          totalInvestido: 0
+        };
+      }
+      agrupado[cat].items.push(posicao);
+      agrupado[cat].totalInvestido += Number(posicao.totalInvestido);
+    });
 
     return {
       totalInvestido,
       totalAtivos: posicoes.length,
-      categorias,
+      categorias: Object.keys(agrupado).sort(),
+      agrupado
     };
   }, [posicoes]);
 
@@ -132,8 +182,11 @@ export default function OperacaoInvestimento() {
       return;
     }
 
-    const acoes = posicoes.filter((posicao) => posicao.tipoAtivo === "ACOES");
-    if (acoes.length === 0) {
+    const tickersParaBuscar = posicoes.filter((posicao) => 
+      ["ACOES", "BDR", "FUNDOS_IMOBILIARIOS"].includes(posicao.tipoAtivo)
+    );
+    
+    if (tickersParaBuscar.length === 0) {
       return;
     }
 
@@ -141,7 +194,7 @@ export default function OperacaoInvestimento() {
 
     const carregarPrecosDoDia = async () => {
       const resultados = await Promise.allSettled(
-        acoes.map(async (posicao) => {
+        tickersParaBuscar.map(async (posicao) => {
           const response = await fetch(
             `${API_BASE_URL}/acao/preco/${posicao.nomeAtivo}`,
             { headers: getAuthHeaders() }
@@ -244,7 +297,15 @@ export default function OperacaoInvestimento() {
             <span>Carteira</span>
             <h1>{carteira?.nome || `Carteira ${id}`}</h1>
           </div>
-          <FaExchangeAlt className="operacao-header-icon" />
+          <div className="header-actions">
+            <button 
+              className="btn-import-b3" 
+              onClick={() => navigate(`/carteiras/${id}/importar/atualizacao`, { state: { carteira } })}
+            >
+              <FaFileImport /> Atualizar com B3
+            </button>
+            <FaExchangeAlt className="operacao-header-icon" />
+          </div>
         </header>
 
         <div className="carteira-tabs" role="tablist" aria-label="Carteira">
@@ -255,7 +316,7 @@ export default function OperacaoInvestimento() {
             className={activeTab === "posicao" ? "active" : ""}
             onClick={() => setActiveTab("posicao")}
           >
-            Posicao
+            Posição
           </button>
           <button
             type="button"
@@ -264,13 +325,93 @@ export default function OperacaoInvestimento() {
             className={activeTab === "operacoes" ? "active" : ""}
             onClick={() => setActiveTab("operacoes")}
           >
-            Operacoes
+            Operações
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "proventos"}
+            className={activeTab === "proventos" ? "active" : ""}
+            onClick={() => {
+              setActiveTab("proventos");
+              carregarProventos();
+            }}
+          >
+            Proventos
           </button>
         </div>
 
+        {activeTab === "proventos" && (
+          <section className="operacao-list provento-list" role="tabpanel">
+            <div className="posicao-header-flex">
+              <h2>Proventos Recebidos</h2>
+              <span className="last-update">
+                Total acumulado: {formatCurrency(proventosResumo.total)}
+              </span>
+            </div>
+
+            {proventos.length === 0 ? (
+              <p className="operacao-empty">Nenhum provento registrado nesta carteira.</p>
+            ) : (
+              <div className="provento-content">
+                <div className="provento-summary-grid">
+                  <article className="provento-summary-card destaque">
+                    <span>Total Recebido</span>
+                    <strong>{formatCurrency(proventosResumo.total)}</strong>
+                  </article>
+                  <article className="provento-summary-card">
+                    <span>Lançamentos</span>
+                    <strong>{proventosResumo.quantidade}</strong>
+                  </article>
+                  <article className="provento-summary-card">
+                    <span>Tipos de Provento</span>
+                    <strong>{proventosResumo.tipos}</strong>
+                  </article>
+                </div>
+
+                <div className="provento-type-row">
+                  {Object.entries(proventosResumo.porTipo).map(([tipo, total]) => (
+                    <span key={tipo} className="provento-type-pill">
+                      {tipo}: {formatCurrency(total)}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="provento-grid">
+                  {proventos.map((provento) => (
+                    <article key={provento.id} className="provento-card">
+                      <header className="provento-card-header">
+                        <strong>{provento.nomeAtivo}</strong>
+                        <span className="provento-tag">{provento.tipoProvento}</span>
+                      </header>
+                      <div className="provento-card-body">
+                        <div className="data-row">
+                          <span className="label">Data de pagamento</span>
+                          <span className="value">
+                            {new Date(provento.dataPagamento).toLocaleDateString("pt-BR")}
+                          </span>
+                        </div>
+                        <div className="data-row highlight">
+                          <span className="label">Valor líquido</span>
+                          <span className="value provento-value">
+                            {formatCurrency(provento.valorLiquido)}
+                          </span>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
         {activeTab === "posicao" && (
           <section className="operacao-list posicao-list" role="tabpanel">
-            <h2>Posicao atual</h2>
+            <div className="posicao-header-flex">
+              <h2>Sua Custódia</h2>
+              <span className="last-update">Atualizado agora</span>
+            </div>
 
             {posicoes.length === 0 ? (
               <p className="operacao-empty">Nenhum ativo em carteira.</p>
@@ -278,64 +419,79 @@ export default function OperacaoInvestimento() {
               <>
                 <div className="posicao-summary-grid">
                   <article className="posicao-summary-card destaque">
-                    <span>Total investido</span>
+                    <span>Patrimônio Total</span>
                     <strong>
                       {formatCurrency(posicaoResumo.totalInvestido)}
                     </strong>
                   </article>
                   <article className="posicao-summary-card">
-                    <span>Ativos em carteira</span>
+                    <span>Total de Ativos</span>
                     <strong>{posicaoResumo.totalAtivos}</strong>
                   </article>
-                  <article className="posicao-summary-card categorias">
-                    <span>Categorias investidas</span>
-                    <div className="categoria-chips">
-                      {posicaoResumo.categorias.map((categoria) => (
-                        <span key={categoria} className="categoria-chip">
-                          {tipoAtivoLabels[categoria] || categoria}
-                        </span>
-                      ))}
-                    </div>
+                  <article className="posicao-summary-card">
+                    <span>Diversificação</span>
+                    <strong>{posicaoResumo.categorias.length} categorias</strong>
                   </article>
                 </div>
 
-                <div className="posicao-grid">
-                  {posicoes.map((posicao) => (
-                    <article key={posicao.nomeAtivo} className="posicao-card">
-                      <div>
-                        <span>{tipoAtivoLabels[posicao.tipoAtivo] || posicao.tipoAtivo}</span>
-                        <h3>{posicao.nomeAtivo}</h3>
+                {posicaoResumo.categorias.map((catKey) => {
+                  const categoria = posicaoResumo.agrupado[catKey];
+                  return (
+                    <div key={catKey} className="categoria-section">
+                      <div className="categoria-header">
+                        <h3>{categoria.label}</h3>
+                        <span className="categoria-total">
+                          {formatCurrency(categoria.totalInvestido)}
+                        </span>
                       </div>
-                      <dl>
-                        <div>
-                          <dt>Quantidade</dt>
-                          <dd>{posicao.quantidadeTotal}</dd>
-                        </div>
-                        <div>
-                          <dt>Preco medio</dt>
-                          <dd>
-                            {formatCurrency(posicao.valorMedioCompra)}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>Preco do dia</dt>
-                          <dd>
-                            {posicao.tipoAtivo === "ACOES" &&
-                            precosDoDia[posicao.nomeAtivo] != null
-                              ? formatCurrency(precosDoDia[posicao.nomeAtivo])
-                              : "--"}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>Total investido</dt>
-                          <dd>
-                            {formatCurrency(posicao.totalInvestido)}
-                          </dd>
-                        </div>
-                      </dl>
-                    </article>
-                  ))}
-                </div>
+                      <div className="posicao-grid">
+                        {categoria.items.map((posicao) => {
+                          const precoDia = precosDoDia[posicao.nomeAtivo];
+                          const totalAtual = precoDia ? precoDia * posicao.quantidadeTotal : null;
+                          const lucroPrejuizo = totalAtual ? totalAtual - posicao.totalInvestido : null;
+                          const percLucro = lucroPrejuizo ? (lucroPrejuizo / posicao.totalInvestido) * 100 : null;
+
+                          return (
+                            <article key={posicao.nomeAtivo} className="posicao-card">
+                              <header className="card-header">
+                                <div className="ticker-box">
+                                  <h3>{posicao.nomeAtivo}</h3>
+                                  <span className="card-cat-label">{tipoAtivoLabels[posicao.tipoAtivo] || posicao.tipoAtivo}</span>
+                                </div>
+                                {percLucro !== null && (
+                                  <span className={`performance-badge ${percLucro >= 0 ? 'positive' : 'negative'}`}>
+                                    {percLucro >= 0 ? '+' : ''}{percLucro.toFixed(2)}%
+                                  </span>
+                                )}
+                              </header>
+                              
+                              <div className="card-body">
+                                <div className="data-row">
+                                  <span className="label">Quantidade</span>
+                                  <span className="value">{posicao.quantidadeTotal}</span>
+                                </div>
+                                <div className="data-row">
+                                  <span className="label">Preço Médio</span>
+                                  <span className="value">{formatCurrency(posicao.valorMedioCompra)}</span>
+                                </div>
+                                <div className="data-row">
+                                  <span className="label">Custo Total</span>
+                                  <span className="value">{formatCurrency(posicao.totalInvestido)}</span>
+                                </div>
+                                {totalAtual && (
+                                  <div className="data-row highlight">
+                                    <span className="label">Valor Atual</span>
+                                    <span className="value">{formatCurrency(totalAtual)}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
               </>
             )}
           </section>
