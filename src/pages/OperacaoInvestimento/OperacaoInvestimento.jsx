@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { FaArrowLeft, FaExchangeAlt, FaFileImport } from "react-icons/fa";
+import { FaArrowLeft, FaExchangeAlt, FaFileExcel, FaFileImport } from "react-icons/fa";
+import { BarChart, Bar, LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import MenuLogado from "../../components/MenuLogado/MenuLogado.jsx";
 import { API_BASE_URL, getAuthHeaders } from "../../config/api";
 import "./OperacaoInvestimento.css";
@@ -18,6 +19,7 @@ const tiposAtivo = [
 const tipoAtivoLabels = Object.fromEntries(
   tiposAtivo.map((tipo) => [tipo.value, tipo.label])
 );
+const proventoChartColors = ["#1d4ed8", "#059669", "#e11d48", "#7c3aed", "#ea580c", "#0f766e", "#334155", "#0891b2"];
 
 export default function OperacaoInvestimento() {
   const { id } = useParams();
@@ -35,10 +37,13 @@ export default function OperacaoInvestimento() {
   const [operacoes, setOperacoes] = useState([]);
   const [posicoes, setPosicoes] = useState([]);
   const [proventos, setProventos] = useState([]);
-  const [activeTab, setActiveTab] = useState("posicao");
+  const [arquivosImportados, setArquivosImportados] = useState([]);
+  const [rentabilidadeData, setRentabilidadeData] = useState([]);
+  const [proventoViewMode, setProventoViewMode] = useState("lista");
+  const [openOperacaoModal, setOpenOperacaoModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("resumo");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [loadingPreco, setLoadingPreco] = useState(false);
 
   const carregarProventos = useCallback(async () => {
     try {
@@ -60,6 +65,16 @@ export default function OperacaoInvestimento() {
       style: "currency",
       currency: "BRL",
     });
+
+  const formatDateTime = (value) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+    return date.toLocaleString("pt-BR", {
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+  };
 
   const valorTotal = useMemo(() => {
     const quantidadeNumerica = Number(quantidade);
@@ -90,32 +105,100 @@ export default function OperacaoInvestimento() {
     };
   }, [proventos]);
 
-  const buscarPrecoAtual = async () => {
-    if (!nomeAtivo) {
-      setError("Informe o ticker do ativo para buscar o preço.");
-      return;
-    }
+  const proventosAgrupadosPorAtivo = useMemo(() => {
+    const agrupado = proventos.reduce((acc, item) => {
+      const chave = item.nomeAtivo || "Sem ativo";
+      if (!acc[chave]) {
+        acc[chave] = {
+          nomeAtivo: chave,
+          total: 0,
+          itens: [],
+        };
+      }
+      acc[chave].itens.push(item);
+      acc[chave].total += Number(item.valorLiquido || 0);
+      return acc;
+    }, {});
 
-    setLoadingPreco(true);
-    setError("");
-    try {
-      const response = await fetch(`${API_BASE_URL}/acao/preco/${nomeAtivo.trim().toUpperCase()}`, {
-        headers: getAuthHeaders(),
-      });
+    return Object.values(agrupado)
+      .map((grupo) => ({
+        ...grupo,
+        itens: grupo.itens.sort(
+          (a, b) => new Date(b.dataPagamento) - new Date(a.dataPagamento)
+        ),
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [proventos]);
 
-      if (!response.ok) {
-        throw new Error("Não foi possível encontrar o preço para este ativo.");
+  const proventosEvolucaoPorAtivo = useMemo(() => {
+    const porAtivo = new Map();
+    const monthFormatter = new Intl.DateTimeFormat("pt-BR", {
+      month: "short",
+      year: "2-digit",
+    });
+
+    proventos.forEach((provento) => {
+      const data = new Date(provento.dataPagamento);
+      if (Number.isNaN(data.getTime())) {
+        return;
       }
 
-      const preco = await response.json();
-      setValorUnitario(preco);
-      setSuccess(`Preço de ${nomeAtivo.toUpperCase()} atualizado.`);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoadingPreco(false);
+      const ano = data.getFullYear();
+      const mes = String(data.getMonth() + 1).padStart(2, "0");
+      const chave = `${ano}-${mes}`;
+      const nomeAtivo = provento.nomeAtivo || "Sem ativo";
+      const valor = Number(provento.valorLiquido || 0);
+
+      if (!porAtivo.has(nomeAtivo)) {
+        porAtivo.set(nomeAtivo, new Map());
+      }
+
+      const mesesAtivo = porAtivo.get(nomeAtivo);
+      if (!mesesAtivo.has(chave)) {
+        mesesAtivo.set(chave, {
+          mes: monthFormatter.format(data).replace(".", ""),
+          ordem: chave,
+          valor: 0,
+        });
+      }
+
+      const registroMes = mesesAtivo.get(chave);
+      registroMes.valor += valor;
+    });
+
+    return proventosAgrupadosPorAtivo.map((grupo) => {
+      const mesesAtivo = porAtivo.get(grupo.nomeAtivo) || new Map();
+      const data = Array.from(mesesAtivo.values())
+        .sort((a, b) => a.ordem.localeCompare(b.ordem))
+        .map((mes) => ({
+          mes: mes.mes,
+          valor: mes.valor,
+        }));
+
+      return {
+        nomeAtivo: grupo.nomeAtivo,
+        total: grupo.total,
+        data,
+      };
+    });
+  }, [proventos, proventosAgrupadosPorAtivo]);
+
+  const rentabilidadeChartData = rentabilidadeData;
+
+  const rentabilidadeChartDomain = useMemo(() => {
+    const valores = rentabilidadeChartData
+      .flatMap((item) => [Number(item.rentabilidadeIndice ?? 0), Number(item.cdiIndice ?? 0)])
+      .filter((valor) => Number.isFinite(valor));
+
+    if (valores.length === 0) {
+      return [100, 101];
     }
-  };
+
+    const maximo = Math.max(...valores);
+    const minimo = Math.min(...valores);
+    const faixa = Math.max(1, maximo - minimo);
+    return [Math.floor(minimo - faixa * 0.15), Math.ceil(maximo + faixa * 0.15)];
+  }, [rentabilidadeChartData]);
 
   const posicaoResumo = useMemo(() => {
     const totalInvestido = posicoes.reduce(
@@ -137,37 +220,116 @@ export default function OperacaoInvestimento() {
       agrupado[cat].totalInvestido += Number(posicao.totalInvestido);
     });
 
+    const categoriasOrdenadas = Object.entries(agrupado)
+      .sort(([, categoriaA], [, categoriaB]) => categoriaB.totalInvestido - categoriaA.totalInvestido)
+      .map(([categoriaKey]) => categoriaKey);
+
     return {
       totalInvestido,
       totalAtivos: posicoes.length,
-      categorias: Object.keys(agrupado).sort(),
+      categorias: categoriasOrdenadas,
       agrupado
     };
   }, [posicoes]);
 
+  const arquivosResumo = useMemo(() => {
+    const total = arquivosImportados.length;
+    const ultimaImportacao = arquivosImportados[0] || null;
+    const competencias = new Set(
+      arquivosImportados.map((arquivo) => `${arquivo.anoCompetencia}-${arquivo.mesCompetencia}`)
+    );
+
+    return {
+      total,
+      competencias: competencias.size,
+      ultimaImportacao,
+    };
+  }, [arquivosImportados]);
+
+  const historicoOperacoesAgrupado = useMemo(() => {
+    const agrupado = operacoes.reduce((acc, operacao) => {
+      const chave = operacao.nomeAtivo || "Sem ativo";
+      if (!acc[chave]) {
+        acc[chave] = {
+          nomeAtivo: chave,
+          totalCompras: 0,
+          totalVendas: 0,
+          itens: [],
+        };
+      }
+
+      const valorTotal = Number(operacao.valorTotal || 0);
+      if (operacao.tipoTransacao === "COMPRA") {
+        acc[chave].totalCompras += valorTotal;
+      } else if (operacao.tipoTransacao === "VENDA") {
+        acc[chave].totalVendas += valorTotal;
+      }
+
+      acc[chave].itens.push(operacao);
+      return acc;
+    }, {});
+
+    return Object.values(agrupado)
+      .map((grupo) => ({
+        ...grupo,
+        itens: grupo.itens.sort(
+          (a, b) => new Date(b.dataCompra) - new Date(a.dataCompra)
+        ),
+      }))
+      .sort((a, b) => {
+        const movimentoA = a.totalCompras + a.totalVendas;
+        const movimentoB = b.totalCompras + b.totalVendas;
+        return movimentoB - movimentoA;
+      });
+  }, [operacoes]);
+
   const carregarOperacoes = useCallback(async () => {
     try {
       setError("");
-      const [operacoesResponse, posicoesResponse] = await Promise.all([
+      const [operacoesResponse, posicoesResponse, proventosResponse, comparativoResponse, arquivosResponse] = await Promise.all([
         fetch(`${API_BASE_URL}/transacao/carteira/${id}`, {
           headers: getAuthHeaders(),
         }),
         fetch(`${API_BASE_URL}/transacao/carteira/${id}/consolidado`, {
           headers: getAuthHeaders(),
         }),
+        fetch(`${API_BASE_URL}/provento/carteira/${id}`, {
+          headers: getAuthHeaders(),
+        }),
+        fetch(`${API_BASE_URL}/benchmark/cdi/carteira/${id}/comparativo`, {
+          headers: getAuthHeaders(),
+        }),
+        fetch(`${API_BASE_URL}/importacao/b3/carteira/${id}/arquivos`, {
+          headers: getAuthHeaders(),
+        }),
       ]);
 
-      if (!operacoesResponse.ok || !posicoesResponse.ok) {
+      if (!operacoesResponse.ok || !posicoesResponse.ok || !proventosResponse.ok || !comparativoResponse.ok || !arquivosResponse.ok) {
         throw new Error("Erro ao carregar operacoes da carteira.");
       }
 
-      const [operacoesData, posicoesData] = await Promise.all([
+      const [operacoesData, posicoesData, proventosData, comparativoData, arquivosData] = await Promise.all([
         operacoesResponse.json(),
         posicoesResponse.json(),
+        proventosResponse.json(),
+        comparativoResponse.json(),
+        arquivosResponse.json(),
       ]);
 
       setOperacoes(operacoesData);
       setPosicoes(posicoesData);
+      setProventos(proventosData);
+      setArquivosImportados(arquivosData);
+      setRentabilidadeData(
+        comparativoData.map((item) => ({
+          ...item,
+          rentabilidadePct: Number(item.rentabilidadePct ?? 0),
+          rentabilidadeIndice: Number(item.rentabilidadeIndice ?? 0),
+          valorAtualizadoTotal: Number(item.valorAtualizadoTotal ?? 0),
+          cdiPct: item.cdiPct === null || item.cdiPct === undefined ? null : Number(item.cdiPct),
+          cdiIndice: item.cdiIndice === null || item.cdiIndice === undefined ? null : Number(item.cdiIndice),
+        }))
+      );
     } catch (err) {
       setError(err.message);
     }
@@ -273,6 +435,7 @@ export default function OperacaoInvestimento() {
       setValorTaxa("");
       setDataCompra(today);
       setSuccess("Operacao registrada com sucesso.");
+      setOpenOperacaoModal(false);
       carregarOperacoes();
     } catch (err) {
       setError(err.message);
@@ -304,11 +467,27 @@ export default function OperacaoInvestimento() {
             >
               <FaFileImport /> Atualizar com B3
             </button>
+            <button
+              className="btn-nova-operacao"
+              type="button"
+              onClick={() => setOpenOperacaoModal(true)}
+            >
+              Nova operação
+            </button>
             <FaExchangeAlt className="operacao-header-icon" />
           </div>
         </header>
 
         <div className="carteira-tabs" role="tablist" aria-label="Carteira">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "resumo"}
+            className={activeTab === "resumo" ? "active" : ""}
+            onClick={() => setActiveTab("resumo")}
+          >
+            Resumo
+          </button>
           <button
             type="button"
             role="tab"
@@ -339,7 +518,125 @@ export default function OperacaoInvestimento() {
           >
             Proventos
           </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "arquivos"}
+            className={activeTab === "arquivos" ? "active" : ""}
+            onClick={() => setActiveTab("arquivos")}
+          >
+            Arquivos B3
+          </button>
         </div>
+
+        {activeTab === "resumo" && (
+          <section className="operacao-list" role="tabpanel">
+            <div className="posicao-header-flex">
+              <h2>Resumo da Carteira</h2>
+              <span className="last-update">Visão consolidada</span>
+            </div>
+
+            <div className="posicao-summary-grid">
+              <article className="posicao-summary-card destaque">
+                <span>Patrimônio Total</span>
+                <strong>{formatCurrency(posicaoResumo.totalInvestido)}</strong>
+              </article>
+              <article className="posicao-summary-card">
+                <span>Ativos em Posição</span>
+                <strong>{posicaoResumo.totalAtivos}</strong>
+              </article>
+              <article className="posicao-summary-card">
+                <span>Proventos Recebidos</span>
+                <strong>{formatCurrency(proventosResumo.total)}</strong>
+              </article>
+            </div>
+
+            <div className="provento-type-row">
+              <span className="provento-type-pill">
+                Categorias em carteira: {posicaoResumo.categorias.length}
+              </span>
+              <span className="provento-type-pill">
+                Lançamentos de proventos: {proventosResumo.quantidade}
+              </span>
+              <span className="provento-type-pill">
+                Ativos com histórico: {historicoOperacoesAgrupado.length}
+              </span>
+            </div>
+
+            <section className="provento-chart-box resumo-rentabilidade-chart">
+              <h3>Rentabilidade</h3>
+              <span className="last-update">Base 100: rentabilidade acumulada da B3 + proventos do mês + CDI acumulado no mesmo periodo</span>
+              <div className="provento-chart-container">
+                <ResponsiveContainer width="100%" height={320}>
+                  <LineChart data={rentabilidadeChartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="mes" />
+                    <YAxis
+                      yAxisId="left"
+                      tickFormatter={(value) => `${value}`}
+                      width={70}
+                      domain={rentabilidadeChartDomain}
+                    />
+                    <Tooltip
+                      formatter={(value, name) => {
+                        if (name === "Rentabilidade acumulada") return [`${(Number(value) - 100).toFixed(2)}%`, name];
+                        if (name === "CDI acumulado") return [`${(Number(value) - 100).toFixed(2)}%`, name];
+                        return [formatCurrency(value), name];
+                      }}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="rentabilidadeIndice"
+                      name="Rentabilidade acumulada"
+                      yAxisId="left"
+                      stroke="#1d4ed8"
+                      strokeWidth={3}
+                      dot={{ r: 3 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="cdiIndice"
+                      name="CDI acumulado"
+                      yAxisId="left"
+                      stroke="#d97706"
+                      strokeWidth={3}
+                      strokeDasharray="6 4"
+                      dot={{ r: 4, fill: "#d97706", strokeWidth: 0 }}
+                      activeDot={{ r: 5 }}
+                      connectNulls
+                      isAnimationActive={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
+
+            <section className="provento-chart-box resumo-rentabilidade-chart">
+              <h3>Valor patrimonial mensal</h3>
+              <span className="last-update">Evolução do valor atualizado consolidado da carteira por competência</span>
+              <div className="provento-chart-container">
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart data={rentabilidadeChartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="mes" />
+                    <YAxis tickFormatter={(value) => formatCurrency(value)} width={110} />
+                    <Tooltip
+                      formatter={(value, name) => [formatCurrency(value), name]}
+                    />
+                    <Legend />
+                    <Bar
+                      dataKey="valorAtualizadoTotal"
+                      name="Valor patrimonial"
+                      fill="#0f766e"
+                      radius={[6, 6, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
+          </section>
+        )}
 
         {activeTab === "proventos" && (
           <section className="operacao-list provento-list" role="tabpanel">
@@ -349,6 +646,28 @@ export default function OperacaoInvestimento() {
                 Total acumulado: {formatCurrency(proventosResumo.total)}
               </span>
             </div>
+            {proventos.length > 0 && (
+              <div className="provento-view-toggle" role="tablist" aria-label="Visualizacao de proventos">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={proventoViewMode === "lista"}
+                  className={proventoViewMode === "lista" ? "active" : ""}
+                  onClick={() => setProventoViewMode("lista")}
+                >
+                  Lista
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={proventoViewMode === "grafico"}
+                  className={proventoViewMode === "grafico" ? "active" : ""}
+                  onClick={() => setProventoViewMode("grafico")}
+                >
+                  Gráfico
+                </button>
+              </div>
+            )}
 
             {proventos.length === 0 ? (
               <p className="operacao-empty">Nenhum provento registrado nesta carteira.</p>
@@ -377,30 +696,68 @@ export default function OperacaoInvestimento() {
                   ))}
                 </div>
 
-                <div className="provento-grid">
-                  {proventos.map((provento) => (
-                    <article key={provento.id} className="provento-card">
-                      <header className="provento-card-header">
-                        <strong>{provento.nomeAtivo}</strong>
-                        <span className="provento-tag">{provento.tipoProvento}</span>
-                      </header>
-                      <div className="provento-card-body">
-                        <div className="data-row">
-                          <span className="label">Data de pagamento</span>
-                          <span className="value">
-                            {new Date(provento.dataPagamento).toLocaleDateString("pt-BR")}
-                          </span>
+                {proventoViewMode === "grafico" ? (
+                  <div className="provento-chart-grid">
+                    {proventosEvolucaoPorAtivo.map((ativo, index) => (
+                      <section key={ativo.nomeAtivo} className="provento-chart-box">
+                        <h3>{ativo.nomeAtivo}</h3>
+                        <span className="last-update">Total: {formatCurrency(ativo.total)}</span>
+                        <div className="provento-chart-container">
+                          <ResponsiveContainer width="100%" height={260}>
+                            <BarChart data={ativo.data} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                              <XAxis dataKey="mes" />
+                              <YAxis tickFormatter={(value) => formatCurrency(value)} width={90} />
+                              <Tooltip formatter={(value) => formatCurrency(value)} />
+                              <Legend />
+                              <Bar
+                                dataKey="valor"
+                                name="Dividendo"
+                                fill={proventoChartColors[index % proventoChartColors.length]}
+                                radius={[4, 4, 0, 0]}
+                              />
+                            </BarChart>
+                          </ResponsiveContainer>
                         </div>
-                        <div className="data-row highlight">
-                          <span className="label">Valor líquido</span>
-                          <span className="value provento-value">
-                            {formatCurrency(provento.valorLiquido)}
-                          </span>
-                        </div>
+                      </section>
+                    ))}
+                  </div>
+                ) : (
+                  proventosAgrupadosPorAtivo.map((grupo) => (
+                    <div key={grupo.nomeAtivo} className="categoria-section">
+                      <div className="categoria-header">
+                        <h3>{grupo.nomeAtivo}</h3>
+                        <span className="categoria-total">
+                          {formatCurrency(grupo.total)}
+                        </span>
                       </div>
-                    </article>
-                  ))}
-                </div>
+                      <div className="provento-grid">
+                        {grupo.itens.map((provento) => (
+                          <article key={provento.id} className="provento-card">
+                            <header className="provento-card-header">
+                              <strong>{provento.nomeAtivo}</strong>
+                              <span className="provento-tag">{provento.tipoProvento}</span>
+                            </header>
+                            <div className="provento-card-body">
+                              <div className="data-row">
+                                <span className="label">Data de pagamento</span>
+                                <span className="value">
+                                  {new Date(provento.dataPagamento).toLocaleDateString("pt-BR")}
+                                </span>
+                              </div>
+                              <div className="data-row highlight">
+                                <span className="label">Valor líquido</span>
+                                <span className="value provento-value">
+                                  {formatCurrency(provento.valorLiquido)}
+                                </span>
+                              </div>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </section>
@@ -436,6 +793,15 @@ export default function OperacaoInvestimento() {
 
                 {posicaoResumo.categorias.map((catKey) => {
                   const categoria = posicaoResumo.agrupado[catKey];
+                  const itemsOrdenados = [...categoria.items].sort((ativoA, ativoB) => {
+                    const precoA = precosDoDia[ativoA.nomeAtivo];
+                    const precoB = precosDoDia[ativoB.nomeAtivo];
+
+                    const valorAtualA = precoA ? precoA * ativoA.quantidadeTotal : Number(ativoA.totalInvestido);
+                    const valorAtualB = precoB ? precoB * ativoB.quantidadeTotal : Number(ativoB.totalInvestido);
+
+                    return valorAtualB - valorAtualA;
+                  });
                   return (
                     <div key={catKey} className="categoria-section">
                       <div className="categoria-header">
@@ -445,7 +811,7 @@ export default function OperacaoInvestimento() {
                         </span>
                       </div>
                       <div className="posicao-grid">
-                        {categoria.items.map((posicao) => {
+                        {itemsOrdenados.map((posicao) => {
                           const precoDia = precosDoDia[posicao.nomeAtivo];
                           const totalAtual = precoDia ? precoDia * posicao.quantidadeTotal : null;
                           const lucroPrejuizo = totalAtual ? totalAtual - posicao.totalInvestido : null;
@@ -497,9 +863,152 @@ export default function OperacaoInvestimento() {
           </section>
         )}
 
+        {activeTab === "arquivos" && (
+          <section className="operacao-list arquivos-b3-list" role="tabpanel">
+            <div className="posicao-header-flex">
+              <h2>Arquivos B3 Importados</h2>
+              <span className="last-update">
+                {arquivosResumo.total} {arquivosResumo.total === 1 ? "arquivo" : "arquivos"}
+              </span>
+            </div>
+
+            {arquivosImportados.length === 0 ? (
+              <p className="operacao-empty">Nenhum arquivo B3 importado nesta carteira.</p>
+            ) : (
+              <div className="arquivos-b3-content">
+                <div className="posicao-summary-grid">
+                  <article className="posicao-summary-card destaque">
+                    <span>Total de Arquivos</span>
+                    <strong>{arquivosResumo.total}</strong>
+                  </article>
+                  <article className="posicao-summary-card">
+                    <span>Competências</span>
+                    <strong>{arquivosResumo.competencias}</strong>
+                  </article>
+                  <article className="posicao-summary-card">
+                    <span>Última Importação</span>
+                    <strong>{arquivosResumo.ultimaImportacao?.mesReferencia || "-"}</strong>
+                  </article>
+                </div>
+
+                <div className="arquivo-b3-table-wrap">
+                  <table className="arquivo-b3-table">
+                    <thead>
+                      <tr>
+                        <th>Arquivo</th>
+                        <th>Competência</th>
+                        <th>Tipo</th>
+                        <th>Importado em</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {arquivosImportados.map((arquivo) => (
+                        <tr key={arquivo.id}>
+                          <td>
+                            <div className="arquivo-b3-name">
+                              <FaFileExcel />
+                              <span>{arquivo.nomeArquivo}</span>
+                            </div>
+                          </td>
+                          <td>
+                            {arquivo.mesReferencia}/{arquivo.anoCompetencia}
+                          </td>
+                          <td>
+                            <span className={`arquivo-b3-badge ${arquivo.tipoImportacao?.toLowerCase()}`}>
+                              {arquivo.tipoImportacao === "INICIAL" ? "Inicial" : "Atualização"}
+                            </span>
+                          </td>
+                          <td>{formatDateTime(arquivo.dataImportacao)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
         {activeTab === "operacoes" && (
           <>
-            <section className="operacao-panel" role="tabpanel">
+            <section className="operacao-list">
+              <h2>Histórico de Operações</h2>
+
+              {operacoes.length === 0 ? (
+                <p className="operacao-empty">Nenhuma operacao registrada.</p>
+              ) : (
+                historicoOperacoesAgrupado.map((grupo) => (
+                  <div key={grupo.nomeAtivo} className="categoria-section">
+                    <div className="categoria-header">
+                      <h3>{grupo.nomeAtivo}</h3>
+                      <span className="categoria-total">
+                        Movimentado: {formatCurrency(grupo.totalCompras + grupo.totalVendas)}
+                      </span>
+                    </div>
+
+                    <div className="operacao-group-summary">
+                      <span className="operacao-resumo-item compra">
+                        Compras: {formatCurrency(grupo.totalCompras)}
+                      </span>
+                      <span className="operacao-resumo-item venda">
+                        Vendas: {formatCurrency(grupo.totalVendas)}
+                      </span>
+                    </div>
+
+                    {grupo.itens.map((operacao) => (
+                      <article key={operacao.id} className="operacao-item">
+                        <div>
+                          <span
+                            className={`operacao-badge ${operacao.tipoTransacao.toLowerCase()}`}
+                          >
+                            {operacao.tipoTransacao === "COMPRA" ? "Compra" : "Venda"}
+                          </span>
+                          <p>
+                            {operacao.quantidade} cotas x{" "}
+                            {formatCurrency(operacao.valorUnitario)}
+                          </p>
+                        </div>
+
+                        <div className="operacao-item-side">
+                          <strong>
+                            {formatCurrency(operacao.valorTotal)}
+                          </strong>
+                          <span>
+                            {new Date(operacao.dataCompra).toLocaleDateString("pt-BR")}
+                          </span>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ))
+              )}
+            </section>
+          </>
+        )}
+
+        {openOperacaoModal && (
+          <div
+            className="operacao-modal-overlay"
+            onClick={() => setOpenOperacaoModal(false)}
+          >
+            <section
+              className="operacao-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Registrar operação"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="operacao-modal-header">
+                <h2>Registrar operação</h2>
+                <button
+                  type="button"
+                  className="operacao-modal-close"
+                  onClick={() => setOpenOperacaoModal(false)}
+                >
+                  Fechar
+                </button>
+              </div>
+
               <div className="operacao-mode" aria-label="Tipo de operacao">
                 <button
                   type="button"
@@ -612,41 +1121,7 @@ export default function OperacaoInvestimento() {
               {error && <p className="operacao-error">{error}</p>}
               {success && <p className="operacao-success">{success}</p>}
             </section>
-
-            <section className="operacao-list">
-              <h2>Operacoes</h2>
-
-              {operacoes.length === 0 ? (
-                <p className="operacao-empty">Nenhuma operacao registrada.</p>
-              ) : (
-                operacoes.map((operacao) => (
-                  <article key={operacao.id} className="operacao-item">
-                    <div>
-                      <span
-                        className={`operacao-badge ${operacao.tipoTransacao.toLowerCase()}`}
-                      >
-                        {operacao.tipoTransacao === "COMPRA" ? "Compra" : "Venda"}
-                      </span>
-                      <h3>{operacao.nomeAtivo}</h3>
-                      <p>
-                        {operacao.quantidade} cotas x{" "}
-                        {formatCurrency(operacao.valorUnitario)}
-                      </p>
-                    </div>
-
-                    <div className="operacao-item-side">
-                      <strong>
-                        {formatCurrency(operacao.valorTotal)}
-                      </strong>
-                      <span>
-                        {new Date(operacao.dataCompra).toLocaleDateString("pt-BR")}
-                      </span>
-                    </div>
-                  </article>
-                ))
-              )}
-            </section>
-          </>
+          </div>
         )}
       </main>
     </div>
