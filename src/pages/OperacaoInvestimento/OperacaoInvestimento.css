@@ -346,6 +346,11 @@
   margin-bottom: 0 !important;
 }
 
+.resumo-header-flex {
+  align-items: flex-start;
+  gap: 18px;
+}
+
 .last-update {
   font-size: 0.8rem;
   color: var(--muted);
@@ -642,6 +647,66 @@
   margin-top: 14px;
 }
 
+.resumo-chart-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 14px;
+  margin-left: auto;
+  padding: 14px;
+  border: 1px solid rgba(37, 99, 235, 0.28);
+  border-radius: 8px;
+  background: #eff6ff;
+}
+
+.resumo-chart-filter > div {
+  min-width: 190px;
+  margin-right: auto;
+}
+
+.resumo-chart-filter span,
+.resumo-chart-filter label {
+  color: #1e3a8a;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.resumo-chart-filter strong {
+  display: block;
+  margin-top: 4px;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.resumo-chart-filter label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.resumo-chart-filter select {
+  min-height: 38px;
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #0f172a;
+  padding: 0 12px;
+  font-weight: 800;
+  outline: none;
+}
+
+.resumo-chart-filter select:disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.resumo-chart-filter select:focus {
+  border-color: rgba(37, 99, 235, 0.7);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
 @media (max-width: 560px) {
   .provento-chart-grid {
     grid-template-columns: 1fr;
@@ -649,6 +714,16 @@
 
   .provento-chart-container {
     height: 280px;
+  }
+
+  .resumo-chart-filter {
+    align-items: stretch;
+    margin-left: 0;
+  }
+
+  .resumo-chart-filter > div,
+  .resumo-chart-filter label {
+    width: 100%;
   }
 }
 
