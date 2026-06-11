@@ -42,6 +42,8 @@ export default function OperacaoInvestimento() {
   const [proventoViewMode, setProventoViewMode] = useState("lista");
   const [openOperacaoModal, setOpenOperacaoModal] = useState(false);
   const [activeTab, setActiveTab] = useState("resumo");
+  const [resumoDataInicial, setResumoDataInicial] = useState("");
+  const [resumoDataFinal, setResumoDataFinal] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -183,11 +185,82 @@ export default function OperacaoInvestimento() {
     });
   }, [proventos, proventosAgrupadosPorAtivo]);
 
-  const rentabilidadeChartData = rentabilidadeData;
+  const resumoRangeOptions = useMemo(() => {
+    const porCompetencia = new Map();
+
+    rentabilidadeData.forEach((item) => {
+      const competencia = item.ordem || item.mes;
+      if (!competencia || porCompetencia.has(competencia)) {
+        return;
+      }
+
+      porCompetencia.set(competencia, {
+        value: competencia,
+        label: item.mes || competencia,
+      });
+    });
+
+    return Array.from(porCompetencia.values()).sort((a, b) => a.value.localeCompare(b.value));
+  }, [rentabilidadeData]);
+
+  useEffect(() => {
+    if (resumoRangeOptions.length === 0) {
+      setResumoDataInicial("");
+      setResumoDataFinal("");
+      return;
+    }
+
+    const primeiraCompetencia = resumoRangeOptions[0].value;
+    const ultimaCompetencia = resumoRangeOptions[resumoRangeOptions.length - 1].value;
+    const competenciasDisponiveis = new Set(resumoRangeOptions.map((option) => option.value));
+
+    setResumoDataInicial((atual) => competenciasDisponiveis.has(atual) ? atual : primeiraCompetencia);
+    setResumoDataFinal((atual) => competenciasDisponiveis.has(atual) ? atual : ultimaCompetencia);
+  }, [resumoRangeOptions]);
+
+  const handleResumoDataInicialChange = (event) => {
+    const novaDataInicial = event.target.value;
+    setResumoDataInicial(novaDataInicial);
+
+    if (resumoDataFinal && novaDataInicial > resumoDataFinal) {
+      setResumoDataFinal(novaDataInicial);
+    }
+  };
+
+  const handleResumoDataFinalChange = (event) => {
+    const novaDataFinal = event.target.value;
+    setResumoDataFinal(novaDataFinal);
+
+    if (resumoDataInicial && novaDataFinal < resumoDataInicial) {
+      setResumoDataInicial(novaDataFinal);
+    }
+  };
+
+  const rentabilidadeChartData = useMemo(() => {
+    if (resumoRangeOptions.length === 0) {
+      return [];
+    }
+
+    const primeiraCompetencia = resumoRangeOptions[0].value;
+    const ultimaCompetencia = resumoRangeOptions[resumoRangeOptions.length - 1].value;
+    const dataInicial = resumoDataInicial || primeiraCompetencia;
+    const dataFinal = resumoDataFinal || ultimaCompetencia;
+
+    return rentabilidadeData.filter((item) => {
+      const competencia = item.ordem || item.mes;
+      return competencia >= dataInicial && competencia <= dataFinal;
+    });
+  }, [rentabilidadeData, resumoDataFinal, resumoDataInicial, resumoRangeOptions]);
 
   const rentabilidadeChartDomain = useMemo(() => {
     const valores = rentabilidadeChartData
-      .flatMap((item) => [Number(item.rentabilidadeIndice ?? 0), Number(item.cdiIndice ?? 0)])
+      .flatMap((item) => [
+        item.rentabilidadeIndice,
+        item.cdiIndice,
+        item.ibovespaIndice,
+      ])
+      .filter((valor) => valor !== null && valor !== undefined)
+      .map((valor) => Number(valor))
       .filter((valor) => Number.isFinite(valor));
 
     if (valores.length === 0) {
@@ -328,6 +401,8 @@ export default function OperacaoInvestimento() {
           valorAtualizadoTotal: Number(item.valorAtualizadoTotal ?? 0),
           cdiPct: item.cdiPct === null || item.cdiPct === undefined ? null : Number(item.cdiPct),
           cdiIndice: item.cdiIndice === null || item.cdiIndice === undefined ? null : Number(item.cdiIndice),
+          ibovespaPct: item.ibovespaPct === null || item.ibovespaPct === undefined ? null : Number(item.ibovespaPct),
+          ibovespaIndice: item.ibovespaIndice === null || item.ibovespaIndice === undefined ? null : Number(item.ibovespaIndice),
         }))
       );
     } catch (err) {
@@ -531,11 +606,8 @@ export default function OperacaoInvestimento() {
 
         {activeTab === "resumo" && (
           <section className="operacao-list" role="tabpanel">
-            <div className="posicao-header-flex">
-              <h2>Resumo da Carteira</h2>
-              <span className="last-update">Visão consolidada</span>
-            </div>
 
+            <h2>Resumo da Carteira</h2>
             <div className="posicao-summary-grid">
               <article className="posicao-summary-card destaque">
                 <span>Patrimônio Total</span>
@@ -562,10 +634,56 @@ export default function OperacaoInvestimento() {
                 Ativos com histórico: {historicoOperacoesAgrupado.length}
               </span>
             </div>
-
+            <p></p>
+            <div className="resumo-chart-filter">
+                <div>
+                  <span>Filtrar gráficos</span>
+                  <strong>
+                    {resumoRangeOptions.length === 0
+                      ? "Nenhuma competência disponível"
+                      : `${rentabilidadeChartData.length} ${rentabilidadeChartData.length === 1 ? "competência" : "competências"}`}
+                  </strong>
+                </div>
+                <label>
+                  Início
+                  <select
+                    value={resumoDataInicial}
+                    onChange={handleResumoDataInicialChange}
+                    disabled={resumoRangeOptions.length === 0}
+                  >
+                    {resumoRangeOptions.length === 0 ? (
+                      <option value="">Sem dados</option>
+                    ) : (
+                      resumoRangeOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </label>
+                <label>
+                  Fim
+                  <select
+                    value={resumoDataFinal}
+                    onChange={handleResumoDataFinalChange}
+                    disabled={resumoRangeOptions.length === 0}
+                  >
+                    {resumoRangeOptions.length === 0 ? (
+                      <option value="">Sem dados</option>
+                    ) : (
+                      resumoRangeOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </label>
+            </div>
             <section className="provento-chart-box resumo-rentabilidade-chart">
               <h3>Rentabilidade</h3>
-              <span className="last-update">Base 100: rentabilidade acumulada da B3 + proventos do mês + CDI acumulado no mesmo periodo</span>
+              <span className="last-update">Base 100: rentabilidade acumulada da B3 + proventos do mês, CDI e Ibovespa no mesmo periodo</span>
               <div className="provento-chart-container">
                 <ResponsiveContainer width="100%" height={320}>
                   <LineChart data={rentabilidadeChartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
@@ -581,6 +699,7 @@ export default function OperacaoInvestimento() {
                       formatter={(value, name) => {
                         if (name === "Rentabilidade acumulada") return [`${(Number(value) - 100).toFixed(2)}%`, name];
                         if (name === "CDI acumulado") return [`${(Number(value) - 100).toFixed(2)}%`, name];
+                        if (name === "Ibovespa acumulado") return [`${(Number(value) - 100).toFixed(2)}%`, name];
                         return [formatCurrency(value), name];
                       }}
                     />
@@ -603,6 +722,19 @@ export default function OperacaoInvestimento() {
                       strokeWidth={3}
                       strokeDasharray="6 4"
                       dot={{ r: 4, fill: "#d97706", strokeWidth: 0 }}
+                      activeDot={{ r: 5 }}
+                      connectNulls
+                      isAnimationActive={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="ibovespaIndice"
+                      name="Ibovespa acumulado"
+                      yAxisId="left"
+                      stroke="#7c3aed"
+                      strokeWidth={3}
+                      strokeDasharray="3 5"
+                      dot={{ r: 4, fill: "#7c3aed", strokeWidth: 0 }}
                       activeDot={{ r: 5 }}
                       connectNulls
                       isAnimationActive={false}
