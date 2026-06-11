@@ -60,8 +60,6 @@ export default function OperacaoInvestimento() {
       console.error("Erro ao carregar proventos:", err);
     }
   }, [id]);
-  const [precosDoDia, setPrecosDoDia] = useState({});
-
   const formatCurrency = (value) =>
     Number(value).toLocaleString("pt-BR", {
       style: "currency",
@@ -413,63 +411,6 @@ export default function OperacaoInvestimento() {
   useEffect(() => {
     carregarOperacoes();
   }, [carregarOperacoes]);
-
-  useEffect(() => {
-    if (activeTab !== "posicao" || posicoes.length === 0) {
-      return;
-    }
-
-    const tickersParaBuscar = posicoes.filter((posicao) => 
-      ["ACOES", "BDR", "FUNDOS_IMOBILIARIOS"].includes(posicao.tipoAtivo)
-    );
-    
-    if (tickersParaBuscar.length === 0) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const carregarPrecosDoDia = async () => {
-      const resultados = await Promise.allSettled(
-        tickersParaBuscar.map(async (posicao) => {
-          const response = await fetch(
-            `${API_BASE_URL}/acao/preco/${posicao.nomeAtivo}`,
-            { headers: getAuthHeaders() }
-          );
-
-          if (!response.ok) {
-            throw new Error(`Falha ao buscar preco de ${posicao.nomeAtivo}`);
-          }
-
-          const preco = await response.json();
-          return [posicao.nomeAtivo, preco];
-        })
-      );
-
-      if (cancelled) {
-        return;
-      }
-
-      setPrecosDoDia((current) => {
-        const proximos = { ...current };
-
-        resultados.forEach((resultado) => {
-          if (resultado.status === "fulfilled") {
-            const [ticker, preco] = resultado.value;
-            proximos[ticker] = preco;
-          }
-        });
-
-        return proximos;
-      });
-    };
-
-    carregarPrecosDoDia();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeTab, posicoes]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -926,11 +867,12 @@ export default function OperacaoInvestimento() {
                 {posicaoResumo.categorias.map((catKey) => {
                   const categoria = posicaoResumo.agrupado[catKey];
                   const itemsOrdenados = [...categoria.items].sort((ativoA, ativoB) => {
-                    const precoA = precosDoDia[ativoA.nomeAtivo];
-                    const precoB = precosDoDia[ativoB.nomeAtivo];
-
-                    const valorAtualA = precoA ? precoA * ativoA.quantidadeTotal : Number(ativoA.totalInvestido);
-                    const valorAtualB = precoB ? precoB * ativoB.quantidadeTotal : Number(ativoB.totalInvestido);
+                    const valorAtualA = ativoA.valorAtualizado === null || ativoA.valorAtualizado === undefined
+                      ? Number(ativoA.totalInvestido)
+                      : Number(ativoA.valorAtualizado);
+                    const valorAtualB = ativoB.valorAtualizado === null || ativoB.valorAtualizado === undefined
+                      ? Number(ativoB.totalInvestido)
+                      : Number(ativoB.valorAtualizado);
 
                     return valorAtualB - valorAtualA;
                   });
@@ -944,10 +886,17 @@ export default function OperacaoInvestimento() {
                       </div>
                       <div className="posicao-grid">
                         {itemsOrdenados.map((posicao) => {
-                          const precoDia = precosDoDia[posicao.nomeAtivo];
-                          const totalAtual = precoDia ? precoDia * posicao.quantidadeTotal : null;
-                          const lucroPrejuizo = totalAtual ? totalAtual - posicao.totalInvestido : null;
-                          const percLucro = lucroPrejuizo ? (lucroPrejuizo / posicao.totalInvestido) * 100 : null;
+                          const precoAtual = posicao.precoAtual === null || posicao.precoAtual === undefined
+                            ? null
+                            : Number(posicao.precoAtual);
+                          const totalAtual = posicao.valorAtualizado === null || posicao.valorAtualizado === undefined
+                            ? null
+                            : Number(posicao.valorAtualizado);
+                          const totalInvestido = Number(posicao.totalInvestido);
+                          const lucroPrejuizo = totalAtual === null ? null : totalAtual - totalInvestido;
+                          const percLucro = lucroPrejuizo === null || totalInvestido === 0
+                            ? null
+                            : (lucroPrejuizo / totalInvestido) * 100;
 
                           return (
                             <article key={posicao.nomeAtivo} className="posicao-card">
@@ -972,11 +921,17 @@ export default function OperacaoInvestimento() {
                                   <span className="label">Preço Médio</span>
                                   <span className="value">{formatCurrency(posicao.valorMedioCompra)}</span>
                                 </div>
+                                {precoAtual !== null && (
+                                  <div className="data-row">
+                                    <span className="label">Preço Atual</span>
+                                    <span className="value">{formatCurrency(precoAtual)}</span>
+                                  </div>
+                                )}
                                 <div className="data-row">
                                   <span className="label">Custo Total</span>
                                   <span className="value">{formatCurrency(posicao.totalInvestido)}</span>
                                 </div>
-                                {totalAtual && (
+                                {totalAtual !== null && (
                                   <div className="data-row highlight">
                                     <span className="label">Valor Atual</span>
                                     <span className="value">{formatCurrency(totalAtual)}</span>
